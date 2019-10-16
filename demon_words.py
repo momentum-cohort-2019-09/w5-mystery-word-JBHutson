@@ -43,9 +43,32 @@ def actualGame(guesses, words, output):
         guess = getUserGuess()
         new_words_and_family = pareDownWordList(words, guess, letters_in_word)
         words = new_words_and_family[0]
+        if len(words) == 1:
+            word = words[0]
         family = new_words_and_family[1].split('_')
         if guess in guessed_letters:
             print('you have already guessed that letter')
+        elif word != '':
+            guessed_letters.append(guess)
+            correct_guess = False
+            for x in range(len(word)):
+                if guess == word[x]:
+                    correct_guess = True
+                    output[int(x)] = guess
+                    letters_in_word[int(x)] = guess
+            if correct_guess == True:
+                print('you have guessed a correct letter')
+                printAstSepLine()
+                print(f"you have {guesses} guesses")
+                print(f"guessed letters: {guessed_letters}")
+                printWordOutput(output)
+            elif correct_guess == False:
+                guesses = guesses - 1
+                print('you have guessed an incorrect letter')
+                printAstSepLine()
+                print(f"you have {guesses} guesses")
+                print(f"guessed letters: {guessed_letters}")
+                printWordOutput(output)
         elif len(words) < num_current_words:
             guessed_letters.append(guess)
             for index in family:
