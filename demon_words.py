@@ -1,65 +1,62 @@
 import random
+import re
 import sys
 
-def getRandomWord():
+def getRandomWordList(word_length):
     with open('words.txt') as words:
-         word_list = words.read().splitlines()
-         ran_word = random.choice(word_list)
-    return ran_word
+         word_list = words.read()
+         regex_exp = r'\b[a-zA-Z]{' + re.escape(str(word_length)) + r'}\b'
+         word_list = re.findall(regex_exp, word_list)
+    return word_list
 
 def getDifficultyLevel():
-    level = input('Would you like easy, medium, or hard difficulty? ')
-    if level == 'easy' or level == 'medium' or level == 'hard':
-        return level
-    else:
-        print('you must choose a level easy, medium or hard')
+    word_length = input('Please provide a word length between 4 and 24: ')
+    if not word_length.isnumeric():
+        print('you must provide a number')
         return getDifficultyLevel()
-
-def chooseWordOfCorrectLength(level):
-    chosen_word = getRandomWord()
-    if (level == 'easy'):
-        while len(chosen_word) < 4 or len(chosen_word) > 6:
-            chosen_word = getRandomWord()
-    elif (level == 'medium'):
-        while len(chosen_word) < 6 or len(chosen_word) > 8:
-            chosen_word = getRandomWord()
-    elif (level == 'hard'):
-        while len(chosen_word) < 8:
-            chosen_word = getRandomWord()
-    return chosen_word
+    if int(word_length) < 4 or int(word_length) > 24:
+        print('you must choose a word length between 4 and 24')
+        return getDifficultyLevel()
+    else:
+        return word_length
 
 def initializeGame():
     print(chr(27) + "[2J")
     guesses_left = 8
-    level = getDifficultyLevel()
-    word = chooseWordOfCorrectLength(level)
-    output = getWordOutput(word)
-    print(f"your word has length: {len(word)}")
+    word_length = getDifficultyLevel()
+    words = getRandomWordList(word_length)
+    output = getWordOutput(word_length)
+    print(f"your word has length: {word_length}")
     printAstSepLine()
     print(f"you have {guesses_left} guesses")
     printWordOutput(output)
-    actualGame(guesses_left, word, output)
+    actualGame(guesses_left, words, output)
 
-def actualGame(guesses, word, output):
-    letters_in_word = list(word)
+def actualGame(guesses, words, output):
+    letters_in_word = list('_' * len(output))
     guessed_letters = []
+    num_current_words = len(words)
+    word = ''
     while True:
-        checkForVictory(letters_in_word, word)
-        checkForGuesses(guesses, word)
+        checkForVictory(letters_in_word, words)
+        checkForGuesses(guesses, words)
         guess = getUserGuess()
+        new_words_and_family = pareDownWordList(words, guess, letters_in_word)
+        words = new_words_and_family[0]
+        family = new_words_and_family[1].split('_')
         if guess in guessed_letters:
             print('you have already guessed that letter')
-        elif guess in letters_in_word:
+        elif len(words) < num_current_words:
             guessed_letters.append(guess)
-            for _ in range(len(letters_in_word)):
-                if guess == letters_in_word[_]:
-                    output[_] = guess
-                    letters_in_word[_] = ''
+            for index in family:
+                output[int(index)] = guess
+                letters_in_word[int(index)] = guess
             print('you have guessed a correct letter')
             printAstSepLine()
             print(f"you have {guesses} guesses")
             print(f"guessed letters: {guessed_letters}")
             printWordOutput(output)
+            num_current_words = len(words)
         else:
             guessed_letters.append(guess)
             guesses = guesses - 1
@@ -69,20 +66,52 @@ def actualGame(guesses, word, output):
             print(f"guessed letters: {guessed_letters}")
             printWordOutput(output)
 
-def checkForVictory(letters, word):
+def pareDownWordList(words, guess, letters):
+    word_lists = {}
+    open_spaces = []
+    for x in range (len(letters)):
+        if letters[x] == '_':
+            open_spaces.append(x)
+    for word in words:
+        word = word.lower()
+        word_family = ''
+        for x in range(len(word)):
+            if word[x] == guess and x in open_spaces:
+                if word_family == '':
+                    word_family = str(x)
+                elif word_family != '':
+                    word_family += '_' + str(x)
+        if word_family != '' and word_lists.get(word_family, None) == None:
+            word_lists[word_family] = []
+            word_lists[word_family].append(word)
+        elif word_family != '':
+            word_lists[word_family].append(word)
+    largest_family = ''
+    for family in word_lists:
+        if largest_family == '':
+            largest_family = family
+        elif largest_family != '':
+            if len(word_lists[family]) > len(word_lists[largest_family]):
+                largest_family = family
+    if largest_family == '':
+        return words, largest_family
+    else:
+        return word_lists[largest_family], largest_family
+
+def checkForVictory(letters, words):
     victory = True
     for letter in letters:
-        if letter != '':
+        if letter == '_':
             victory = False
     if victory:
         print("You have won")
-        print(f"The word is {word}")
+        print(f"The word is: " + words[0])
         playAgain()
 
-def checkForGuesses(guesses, word):
+def checkForGuesses(guesses, words):
     if guesses == 0:
         print("you have lost")
-        print(f"the word is {word}")
+        print(f"the word is: " + words[0])
         playAgain()
 
 def playAgain():
@@ -96,9 +125,9 @@ def playAgain():
         print("you must answer yes or no")
         playAgain()
 
-def getWordOutput(word):
+def getWordOutput(word_length):
     word_output = {}
-    for _ in range(len(word)):
+    for _ in range(int(word_length)):
         word_output[_] = '_'
     return word_output
 
